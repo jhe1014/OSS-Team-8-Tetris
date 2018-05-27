@@ -1,12 +1,10 @@
-
-import java.awt.EventQueue;
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JLabel;
 import java.awt.Color;
 import java.awt.Font;
@@ -15,15 +13,31 @@ import java.awt.event.ActionListener;
 
 import javax.swing.SwingConstants;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JButton;
 import javax.swing.UIManager;
 
 public class TetrisBoard extends JFrame {
 
 	private JPanel contentPane;
-	
+
 	private int port;
-	private String ip = "null", nickname = "null";
+	public String ip = "null", nickname = "null";
+	
+	private boolean svst = false; // 서버로 접속했는지 확인하기 위해 만든 변수
+	private boolean ctst = false; // 클라이언트로 접속했는지 확인하기 위해 만든 변수
+	
+	JLabel lblIpValue = new JLabel();
+	JLabel lblPortValue = new JLabel();
+	JLabel lblNickNameValue = new JLabel();
+	
+	JTextField txsip = new JTextField("127.0.0.1"); // 서버창에서 ip 입력하는 칸
+	JTextField txspt = new JTextField(""); // 서버창에서 포트번호 입력하는 칸
+	JTextField txsnick = new JTextField(""); // 서버창에서 닉네임 입력하는 칸
+	
+	JTextField txcip = new JTextField("127.0.0.1"); // 클라이언트창에서 ip 입력하는 칸
+	JTextField txcpt = new JTextField(""); // 클라이언트창에서 포트번호 입력하는 칸
+	JTextField txcnick = new JTextField(""); // 클라이언트창에서 닉네임 입력하는 칸
 
 	public TetrisBoard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -43,9 +57,33 @@ public class TetrisBoard extends JFrame {
 		menuBar.add(mnNewMenu);
 		
 		JMenuItem mntmNewMenuItem_Server = new JMenuItem("서버로 게임하기");
+		mntmNewMenuItem_Server.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if (svst == false && ctst == false) {
+					Serverframe svf = new Serverframe();
+					svf.setVisible(true);
+				}
+				
+				else { // 어느 한 쪽 모드로라도 접속 중인 경우 오류 메시지 띄움
+					JOptionPane.showMessageDialog(null, "이미 접속 중입니다!", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+		});
 		mnNewMenu.add(mntmNewMenuItem_Server);
 		
 		JMenuItem mntmNewMenuItem_Client = new JMenuItem("클라이언트로 게임하기");
+		mntmNewMenuItem_Client.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if (ctst == false && ctst == false) {
+					Clientframe ctf = new Clientframe();
+					ctf.setVisible(true);
+				}
+				
+				else { // 어느 한 쪽 모드로라도 접속 중인 경우 오류 메시지 띄움
+					JOptionPane.showMessageDialog(null, "이미 접속 중입니다!", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+		});
 		mnNewMenu.add(mntmNewMenuItem_Client);
 		
 		JPanel panel = new JPanel();
@@ -58,7 +96,7 @@ public class TetrisBoard extends JFrame {
 		lblIp.setBounds(5, 0, 25, 15);
 		panel.add(lblIp);
 		
-		JLabel lblIpValue = new JLabel();
+		
 		lblIpValue.setBounds(35, 0, 108, 15);
 		lblIpValue.setText(ip);
 		panel.add(lblIpValue);
@@ -67,11 +105,14 @@ public class TetrisBoard extends JFrame {
 		lblPort.setBounds(160, 0, 57, 15);
 		panel.add(lblPort);
 		
+		lblPortValue.setBounds(195,0, 108, 15);
+		panel.add(lblPortValue);
+		
 		JLabel lblNickname = new JLabel("닉네임 : ");
 		lblNickname.setBounds(5, 20, 50, 15);
 		panel.add(lblNickname);
 		
-		JLabel lblNickNameValue = new JLabel();
+		
 		lblNickNameValue.setBounds(60, 20, 108, 15);
 		lblNickNameValue.setText(nickname);
 		panel.add(lblNickNameValue);
@@ -143,4 +184,147 @@ public class TetrisBoard extends JFrame {
 		});
 		panel_Chat.add(btnEnd);
 	}
+
+	
+	class Serverframe extends JFrame {
+		public Serverframe() {
+			super("Serverframe");
+			setResizable(false);
+			setSize(400, 250);
+			getContentPane().setLayout(null);
+			
+			JLabel svip = new JLabel("IP주소");
+			svip.setFont(new Font("굴림", Font.BOLD, 15));
+			svip.setBounds(31, 27, 78, 21);
+			getContentPane().add(svip);
+			
+			JLabel svpt = new JLabel("포트번호");
+			svpt.setFont(new Font("굴림", Font.BOLD, 15));
+			svpt.setBounds(31, 63, 105, 21);
+			getContentPane().add(svpt);
+			
+			JLabel svnick = new JLabel("닉네임");
+			svnick.setFont(new Font("굴림", Font.BOLD, 15));
+			svnick.setBounds(31, 99, 110, 21);
+			getContentPane().add(svnick);
+			
+			txsip.setBounds(164, 24, 200, 27);
+			getContentPane().add(txsip);
+			txsip.setColumns(10);
+			
+			txspt.setBounds(164, 60, 200, 27);
+			getContentPane().add(txspt);
+			
+			txsnick.setBounds(164, 96, 200, 27);
+			getContentPane().add(txsnick);
+			
+			JButton btnOKButton = new JButton("OK");
+			btnOKButton.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					String tfsip = "";
+					String tfspt = "";
+					String tfsnick = "";
+					
+					tfsip = txsip.getText();
+					tfspt = txspt.getText();
+					tfsnick = txsnick.getText();
+					
+					svst = true;
+					
+					lblIpValue.setText(tfsip);
+					lblPortValue.setText(tfspt);
+					lblNickNameValue.setText(tfsnick);
+					
+					setVisible(false);
+				}
+			});
+			
+			btnOKButton.setFont(new Font("굴림", Font.BOLD, 18));
+			btnOKButton.setBounds(55, 150, 120, 35);
+			getContentPane().add(btnOKButton);
+			
+			JButton btnCancelButton = new JButton("Cancle");
+			btnCancelButton.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+						txsip.setText("127.0.0.1");
+						txspt.setText(""); 
+						setVisible(false);
+				}
+			});
+			btnCancelButton.setFont(new Font("굴림", Font.BOLD, 18));
+			btnCancelButton.setBounds(217, 150, 120, 35);
+			getContentPane().add(btnCancelButton);
+		}
+	}
+		
+		class Clientframe extends JFrame {
+			public Clientframe() {
+				super("Clientframe");
+				setResizable(false);
+				setSize(400, 250);
+				getContentPane().setLayout(null);
+				
+				JLabel ctip = new JLabel("IP주소");
+				ctip.setFont(new Font("굴림", Font.BOLD, 15));
+				ctip.setBounds(31, 27, 78, 21);
+				getContentPane().add(ctip);
+				
+				JLabel ctpt = new JLabel("포트번호");
+				ctpt.setFont(new Font("굴림", Font.BOLD, 15));
+				ctpt.setBounds(31, 63, 105, 21);
+				getContentPane().add(ctpt);
+				
+				JLabel ctnick = new JLabel("닉네임");
+				ctnick.setFont(new Font("굴림", Font.BOLD, 15));
+				ctnick.setBounds(31, 99, 110, 21);
+				getContentPane().add(ctnick);
+				
+				txcip.setBounds(164, 24, 200, 27);
+				getContentPane().add(txcip);
+				txcip.setColumns(10);
+				
+				txcpt.setBounds(164, 60, 200, 27);
+				getContentPane().add(txcpt);
+				
+				txcnick.setBounds(164, 96, 200, 27);
+				getContentPane().add(txcnick);
+				
+				JButton btnOKButton = new JButton("OK");
+				btnOKButton.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						String tfcip = "";
+						String tfcpt = "";
+						String tfcnick = "";
+						
+						tfcip = txcip.getText();
+						tfcpt = txcpt.getText();
+						tfcnick = txcnick.getText();
+						
+						ctst = true;
+						
+						lblIpValue.setText(tfcip);
+					    lblPortValue.setText(tfcpt);
+					    lblNickNameValue.setText(tfcnick);
+						
+						setVisible(false);
+					}
+				});
+				
+				btnOKButton.setFont(new Font("굴림", Font.BOLD, 18));
+				btnOKButton.setBounds(55, 150, 120, 35);
+				getContentPane().add(btnOKButton);
+				
+				JButton btnCancelButton = new JButton("Cancle");
+				btnCancelButton.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+							txcip.setText("127.0.0.1");
+							txcpt.setText(""); 
+							setVisible(false);
+					}
+				});
+				btnCancelButton.setFont(new Font("굴림", Font.BOLD, 18));
+				btnCancelButton.setBounds(217, 150, 120, 35);
+				getContentPane().add(btnCancelButton);
+			}
+		}
 }
