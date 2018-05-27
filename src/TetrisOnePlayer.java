@@ -1,7 +1,3 @@
-
-
-
-
 import java.awt.EventQueue;
 
 import javax.swing.JButton;
@@ -21,17 +17,9 @@ import java.awt.Label;
 import java.awt.Panel;
 
 
-
-
-
-
-
 public class TetrisOnePlayer extends JFrame {
 
 	private JPanel contentPane;
-
-	
-	
 
 	/**
 	 * Create the frame.
