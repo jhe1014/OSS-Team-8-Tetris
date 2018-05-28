@@ -1,5 +1,6 @@
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
@@ -38,10 +39,13 @@ public class TetrisBoard extends JFrame {
 	JTextField txcip = new JTextField("127.0.0.1"); // 클라이언트창에서 ip 입력하는 칸
 	JTextField txcpt = new JTextField(""); // 클라이언트창에서 포트번호 입력하는 칸
 	JTextField txcnick = new JTextField(""); // 클라이언트창에서 닉네임 입력하는 칸
+	
+	private JTextField CTF; // 채팅메시지 입력칸
+	JTextArea ChatArea; // 채팅메시지 띄우는 칸
 
 	public TetrisBoard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 800, 650);
+		setBounds(100, 100, 800, 700);
 		setResizable(false);
 		contentPane = new JPanel();
 		contentPane.setBackground(new Color(176, 224, 230));
@@ -156,14 +160,40 @@ public class TetrisBoard extends JFrame {
 		contentPane.add(panel_Your);
 		
 		JPanel panel_Chat = new JPanel();
-		panel_Chat.setBounds(10, 500, 760, 100);
+		panel_Chat.setBounds(10, 500, 760, 127);
 		contentPane.add(panel_Chat);
 		panel_Chat.setLayout(null);
 		
-		JTextArea textArea = new JTextArea();
-		textArea.setBackground(new Color(240, 255, 240));
-		textArea.setBounds(0, 0, 630, 100);
-		panel_Chat.add(textArea);
+		CTF = new JTextField();
+		CTF.setBounds(0, 100, 630, 27);
+		CTF.setBackground(new Color(240, 255, 240));
+		panel_Chat.add(CTF);
+		CTF.setColumns(10);
+		
+		JScrollPane Chatrange = new JScrollPane();
+		Chatrange.setBounds(0, 0, 630, 100);
+		panel_Chat.add(Chatrange);
+		
+		ChatArea = new JTextArea();
+		Chatrange.setViewportView(ChatArea);
+		ChatArea.setEditable(false);
+		ChatArea.setLineWrap(true);
+
+		JButton btnSend = new JButton("Send"); // 채팅 메시지 전송 버튼
+		btnSend.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				//String text = "] "+MTF.getText()+":"+CTF.getText();
+				
+				//send(text);
+				
+				ChatArea.append(CTF.getText()+"\n"); // 스크롤 페인 테스트용 (나중에 지우기)
+	
+				CTF.setText("");
+				CTF.requestFocus();
+			}
+		});
+		btnSend.setBounds(630, 100, 130, 27);
+		panel_Chat.add(btnSend);
 		
 		JButton btnChat = new JButton("시작하기");
 		btnChat.setFont(new Font("굴림", Font.PLAIN, 15));
