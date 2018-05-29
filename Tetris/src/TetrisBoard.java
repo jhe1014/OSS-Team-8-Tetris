@@ -319,24 +319,6 @@ public class TetrisBoard extends JFrame {
 		thread.start();
 	}
 	
-	/*void S_send(String data) {
-		 Thread thread = new Thread() { //데이터를 서버로 보내는 작업 스레드
-	         @Override
-	         public void run() {
-	            try {
-	               byte[] byteArr = data.getBytes("UTF-8");
-
-	               OutputStream outputStream = socket.getOutputStream();
-	               outputStream.write(byteArr);
-	               outputStream.flush();
-	            } catch(Exception e) {
-	               stopClient();  //클라이언트 멈춤
-	            }            
-	         }
-	      };
-	      thread.start(); //스레드 시작
-	}*/
-	
 	void stopServer() {
 		 try {
 	    	  ChatArea.append("클라이언트와 연결 끊음.\n");
@@ -383,18 +365,6 @@ public class TetrisBoard extends JFrame {
 	   void C_receive() { // 서버에서 보낸 데이터 받는 메소드
 	      while(true) {
 	         try {
-	            /*byte[] byteArr = new byte[100];
-	            InputStream inputStream = socket.getInputStream(); 
-	            
-	            int readByteCount = inputStream.read(byteArr);    //데이터받기
-
-	            if(readByteCount == -1){
-	               throw new IOException(); 
-	            }
-
-	            String data = new String(byteArr, 0, readByteCount, "UTF-8"); //문자열로 변환
-	            ChatArea.append(data + "\n"); */
-	        	 
 	        	BufferedReader br = new BufferedReader(
 							new InputStreamReader (socket.getInputStream()));
 					while (true) {
@@ -407,25 +377,6 @@ public class TetrisBoard extends JFrame {
 	         }
 	      }
 	   }		   
-	   
-	   /*void C_send(String data) { 
-		      Thread thread = new Thread() { //데이터를 서버로 보내는 작업 스레드
-		         @Override
-		         public void run() {
-		            try {
-		               byte[] byteArr = data.getBytes("UTF-8");
-
-		               OutputStream outputStream = socket.getOutputStream();
-		               outputStream.write(byteArr);
-		               outputStream.flush();
-		               
-		            } catch(Exception e) {
-		               stopClient();  //클라이언트 멈춤
-		            }            
-		         }
-		      };
-		      thread.start(); //스레드 시작	   
-}*/
 
 	class Serverframe extends JFrame{ // 서버로 접속하기 눌렀을 때 입력창
 		
