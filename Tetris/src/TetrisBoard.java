@@ -8,9 +8,19 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JLabel;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 import javax.swing.SwingConstants;
 import javax.swing.JTextArea;
@@ -19,11 +29,23 @@ import javax.swing.JButton;
 import javax.swing.UIManager;
 
 public class TetrisBoard extends JFrame {
+	
+	private static final long serialVersionUID = 1L;
 
 	private JPanel contentPane;
 
 	private int port;
 	public String ip = "null", nickname = "null";
+
+	// 서버 입력텍스트 내용 저장할 변수
+	private String tfsip = "";
+	private String tfspt = "";
+	private String tfsnick = "";
+	
+	// 클라이언트 입력텍스트 내용 저장할 변수
+	private String tfcip = ""; 
+	private String tfcpt = ""; 
+	private String tfcnick = "";
 	
 	private boolean svst = false; // 서버로 접속했는지 확인하기 위해 만든 변수
 	private boolean ctst = false; // 클라이언트로 접속했는지 확인하기 위해 만든 변수
@@ -42,7 +64,10 @@ public class TetrisBoard extends JFrame {
 	
 	private JTextField CTF; // 채팅메시지 입력칸
 	JTextArea ChatArea; // 채팅메시지 띄우는 칸
-
+	
+	ServerSocket ssocket; // 서버 소켓
+	Socket socket; // 클라이언트 소켓
+	
 	public TetrisBoard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 700);
@@ -78,7 +103,7 @@ public class TetrisBoard extends JFrame {
 		JMenuItem mntmNewMenuItem_Client = new JMenuItem("클라이언트로 게임하기");
 		mntmNewMenuItem_Client.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (ctst == false && ctst == false) {
+				if (svst == false && ctst == false) {
 					Clientframe ctf = new Clientframe();
 					ctf.setVisible(true);
 				}
@@ -182,14 +207,51 @@ public class TetrisBoard extends JFrame {
 		JButton btnSend = new JButton("Send"); // 채팅 메시지 전송 버튼
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//String text = "] "+MTF.getText()+":"+CTF.getText();
+				if(ctst == true && svst == false) { // 클라이언트로 접속해 있는 경우 
+					String s = CTF.getText().trim();
+					
+					if(s.length()==0) return;
+					
+					try {
+						if(socket==null) return;
+						
+						PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+						pw.println(tfcnick + "] " + s);
+						
+						ChatArea.append(tfcnick + "]" + s + "\n");
+						
+						CTF.setText("");
+						CTF.requestFocus();
+					} catch(Exception e2) {
+						ChatArea.append("클라이언트가 접속을 해제함\n");
+					}
+					//C_send(text);
+				}
 				
-				//send(text);
+				else if (svst == true && ctst == false) { // 서버로 접속해 있는 경우
+						String s = CTF.getText().trim();
+						
+						if(s.length()==0) return;
+						
+						try {
+							if(socket==null) return;
+							
+							PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+							pw.println(tfsnick + "] " + s);
+							
+							ChatArea.append(tfsnick + "]" + s + "\n");
+							
+							CTF.setText("");
+							CTF.requestFocus();
+						} catch(Exception e2) {
+							ChatArea.append("클라이언트가 접속을 해제함\n");
+						}
+					//S_send(text);
+					}
 				
-				ChatArea.append(CTF.getText()+"\n"); // 스크롤 페인 테스트용 (나중에 지우기)
-	
-				CTF.setText("");
-				CTF.requestFocus();
+				else {
+					JOptionPane.showMessageDialog(null, "서버나 클라이언트로 접속되어있지않습니다!", "Error", JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		});
 		btnSend.setBounds(630, 100, 130, 27);
@@ -205,7 +267,6 @@ public class TetrisBoard extends JFrame {
 		btnEnd.setFont(new Font("굴림", Font.PLAIN, 15));
 		btnEnd.setBounds(630, 49, 130, 51);
 		btnEnd.addActionListener(new ActionListener() {
-			
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				// TODO Auto-generated method stub
@@ -214,9 +275,160 @@ public class TetrisBoard extends JFrame {
 		});
 		panel_Chat.add(btnEnd);
 	}
-
 	
-	class Serverframe extends JFrame {
+	void startServer() {
+		Thread thread = new Thread() {
+			BufferedReader br; 
+			
+			public void run() {
+				String cip = null;
+				
+				try {
+					ssocket = new ServerSocket(Integer.parseInt(tfspt));
+					ChatArea.append("서버 대기중\n");
+					
+					while (true) {
+						socket = ssocket.accept();
+						cip = socket.getInetAddress().getHostAddress();
+						ChatArea.append("["+ cip +" 에서 서버에 접속함...]\n");
+						br = new BufferedReader(
+								new InputStreamReader (socket.getInputStream()));
+						String msg = br.readLine();
+						ChatArea.append(msg + "\n");
+					}
+				} catch (Exception e) {
+					ChatArea.append("[" + cip + "가 접속을 해제하였습니다.");
+				
+					//if (!ssocket.isClosed()) {stopServer();};
+					//closeAll();
+					
+					//System.out.println("접속 해제\n");
+				}
+			}
+			
+			private void closeAll() {
+				try {
+					if(br!=null) br.close();
+					if(socket!=null) socket.close();
+					if(ssocket!=null) ssocket.close();
+				} catch(Exception e) {
+					System.out.println("closeAll()에서 예외 : " + e);
+				}
+			}
+		};
+		thread.start();
+	}
+	
+	/*void S_send(String data) {
+		 Thread thread = new Thread() { //데이터를 서버로 보내는 작업 스레드
+	         @Override
+	         public void run() {
+	            try {
+	               byte[] byteArr = data.getBytes("UTF-8");
+
+	               OutputStream outputStream = socket.getOutputStream();
+	               outputStream.write(byteArr);
+	               outputStream.flush();
+	            } catch(Exception e) {
+	               stopClient();  //클라이언트 멈춤
+	            }            
+	         }
+	      };
+	      thread.start(); //스레드 시작
+	}*/
+	
+	void stopServer() {
+		 try {
+	    	  ChatArea.append("클라이언트와 연결 끊음.\n");
+	    	  ChatArea.setText("");
+	    
+	         if(ssocket!=null && !ssocket.isClosed()) {
+	            ssocket.close();
+	         }
+	      } catch (IOException e) {}
+	}
+	
+	void startClient() { // 클라이언스타트 스레드의 메소드
+	      Thread thread = new Thread() { //스레드 생성
+	         @Override
+	         public void run() { // run메소드 재정의
+	        	 try {
+	               socket = new Socket(); 
+	               socket.connect(new InetSocketAddress(tfcip, Integer.parseInt(tfcpt)));  //지금 사용중인 IP ,포트번호 바인딩
+	               ChatArea.append("[연결 완료: " + socket.getRemoteSocketAddress() + "]\n");
+	            } catch(Exception e) {
+	            	ChatArea.append("[서버 통신 안됨]\n");
+	            	
+	               if(!socket.isClosed()) { stopClient(); }
+
+	               return;
+	            }	    
+	            C_receive(); //서버에서 보낸 데이터 받기	            
+	         }
+	      };   	      
+	      thread.start();
+	   }
+	
+	   void stopClient() { //클라이언트 정지 메소드
+	      try {
+	    	  ChatArea.append("서버와 연결 끊음.\n");
+	    	  ChatArea.setText("");
+	    
+	         if(socket!=null && !socket.isClosed()) {
+	            socket.close();
+	         }
+	      } catch (IOException e) {}
+	   }   
+
+	   void C_receive() { // 서버에서 보낸 데이터 받는 메소드
+	      while(true) {
+	         try {
+	            /*byte[] byteArr = new byte[100];
+	            InputStream inputStream = socket.getInputStream(); 
+	            
+	            int readByteCount = inputStream.read(byteArr);    //데이터받기
+
+	            if(readByteCount == -1){
+	               throw new IOException(); 
+	            }
+
+	            String data = new String(byteArr, 0, readByteCount, "UTF-8"); //문자열로 변환
+	            ChatArea.append(data + "\n"); */
+	        	 
+	        	BufferedReader br = new BufferedReader(
+							new InputStreamReader (socket.getInputStream()));
+					while (true) {
+						String msg = br.readLine();
+						ChatArea.append(msg + "\n");
+					}
+	         } catch (Exception e) {
+	            stopClient(); //클라이언트 멈춤
+	            break;
+	         }
+	      }
+	   }		   
+	   
+	   /*void C_send(String data) { 
+		      Thread thread = new Thread() { //데이터를 서버로 보내는 작업 스레드
+		         @Override
+		         public void run() {
+		            try {
+		               byte[] byteArr = data.getBytes("UTF-8");
+
+		               OutputStream outputStream = socket.getOutputStream();
+		               outputStream.write(byteArr);
+		               outputStream.flush();
+		               
+		            } catch(Exception e) {
+		               stopClient();  //클라이언트 멈춤
+		            }            
+		         }
+		      };
+		      thread.start(); //스레드 시작	   
+}*/
+
+	class Serverframe extends JFrame{ // 서버로 접속하기 눌렀을 때 입력창
+		
 		public Serverframe() {
 			super("Serverframe");
 			setResizable(false);
@@ -251,10 +463,6 @@ public class TetrisBoard extends JFrame {
 			JButton btnOKButton = new JButton("OK");
 			btnOKButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
-					String tfsip = "";
-					String tfspt = "";
-					String tfsnick = "";
-					
 					tfsip = txsip.getText();
 					tfspt = txspt.getText();
 					tfsnick = txsnick.getText();
@@ -264,6 +472,8 @@ public class TetrisBoard extends JFrame {
 					lblIpValue.setText(tfsip);
 					lblPortValue.setText(tfspt);
 					lblNickNameValue.setText(tfsnick);
+					
+					startServer();
 					
 					setVisible(false);
 				}
@@ -287,7 +497,7 @@ public class TetrisBoard extends JFrame {
 		}
 	}
 		
-		class Clientframe extends JFrame {
+		class Clientframe extends JFrame { // 클라이언트로 접속하기 눌렀을 때 입력창
 			public Clientframe() {
 				super("Clientframe");
 				setResizable(false);
@@ -322,10 +532,6 @@ public class TetrisBoard extends JFrame {
 				JButton btnOKButton = new JButton("OK");
 				btnOKButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent e) {
-						String tfcip = "";
-						String tfcpt = "";
-						String tfcnick = "";
-						
 						tfcip = txcip.getText();
 						tfcpt = txcpt.getText();
 						tfcnick = txcnick.getText();
@@ -335,6 +541,8 @@ public class TetrisBoard extends JFrame {
 						lblIpValue.setText(tfcip);
 					    lblPortValue.setText(tfcpt);
 					    lblNickNameValue.setText(tfcnick);
+					    
+					    startClient();
 						
 						setVisible(false);
 					}
