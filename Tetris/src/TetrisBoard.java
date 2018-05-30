@@ -8,10 +8,10 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JLabel;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,6 +64,7 @@ public class TetrisBoard extends JFrame {
 	
 	private JTextField CTF; // 채팅메시지 입력칸
 	JTextArea ChatArea; // 채팅메시지 띄우는 칸
+	JScrollPane Chatrange;
 	
 	ServerSocket ssocket; // 서버 소켓
 	Socket socket; // 클라이언트 소켓
@@ -125,7 +126,6 @@ public class TetrisBoard extends JFrame {
 		lblIp.setBounds(5, 0, 25, 15);
 		panel.add(lblIp);
 		
-		
 		lblIpValue.setBounds(35, 0, 108, 15);
 		lblIpValue.setText(ip);
 		panel.add(lblIpValue);
@@ -140,7 +140,6 @@ public class TetrisBoard extends JFrame {
 		JLabel lblNickname = new JLabel("닉네임 : ");
 		lblNickname.setBounds(5, 20, 50, 15);
 		panel.add(lblNickname);
-		
 		
 		lblNickNameValue.setBounds(60, 20, 108, 15);
 		lblNickNameValue.setText(nickname);
@@ -195,7 +194,7 @@ public class TetrisBoard extends JFrame {
 		panel_Chat.add(CTF);
 		CTF.setColumns(10);
 		
-		JScrollPane Chatrange = new JScrollPane();
+		Chatrange = new JScrollPane();
 		Chatrange.setBounds(0, 0, 630, 100);
 		panel_Chat.add(Chatrange);
 		
@@ -203,51 +202,33 @@ public class TetrisBoard extends JFrame {
 		Chatrange.setViewportView(ChatArea);
 		ChatArea.setEditable(false);
 		ChatArea.setLineWrap(true);
+		
+		CTF.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(ctst == true && svst == false) { // 클라이언트로 접속해 있는 경우 
+					C_send();
+				}
+				
+				else if (svst == true && ctst == false) { // 서버로 접속해 있는 경우
+					S_send();
+				}
+				
+				else {
+					JOptionPane.showMessageDialog(null, "서버나 클라이언트로 접속되어있지않습니다!", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+		});
 
 		JButton btnSend = new JButton("Send"); // 채팅 메시지 전송 버튼
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if(ctst == true && svst == false) { // 클라이언트로 접속해 있는 경우 
-					String s = CTF.getText().trim();
-					
-					if(s.length()==0) return;
-					
-					try {
-						if(socket==null) return;
-						
-						PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
-						pw.println(tfcnick + "] " + s);
-						
-						ChatArea.append(tfcnick + "]" + s + "\n");
-						
-						CTF.setText("");
-						CTF.requestFocus();
-					} catch(Exception e2) {
-						ChatArea.append("클라이언트가 접속을 해제함\n");
-					}
-					//C_send(text);
+					C_send();
 				}
 				
 				else if (svst == true && ctst == false) { // 서버로 접속해 있는 경우
-						String s = CTF.getText().trim();
-						
-						if(s.length()==0) return;
-						
-						try {
-							if(socket==null) return;
-							
-							PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
-							pw.println(tfsnick + "] " + s);
-							
-							ChatArea.append(tfsnick + "]" + s + "\n");
-							
-							CTF.setText("");
-							CTF.requestFocus();
-						} catch(Exception e2) {
-							ChatArea.append("클라이언트가 접속을 해제함\n");
-						}
-					//S_send(text);
-					}
+					S_send();
+				}
 				
 				else {
 					JOptionPane.showMessageDialog(null, "서버나 클라이언트로 접속되어있지않습니다!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -256,6 +237,7 @@ public class TetrisBoard extends JFrame {
 		});
 		btnSend.setBounds(630, 100, 130, 27);
 		panel_Chat.add(btnSend);
+	
 		
 		JButton btnChat = new JButton("시작하기");
 		btnChat.setFont(new Font("굴림", Font.PLAIN, 15));
@@ -287,17 +269,20 @@ public class TetrisBoard extends JFrame {
 					ssocket = new ServerSocket(Integer.parseInt(tfspt));
 					ChatArea.append("서버 대기중\n");
 					
-					while (true) {
 						socket = ssocket.accept();
 						cip = socket.getInetAddress().getHostAddress();
 						ChatArea.append("["+ cip +" 에서 서버에 접속함...]\n");
-						br = new BufferedReader(
-								new InputStreamReader (socket.getInputStream()));
-						String msg = br.readLine();
-						ChatArea.append(msg + "\n");
-					}
+						
+						while(true) {
+							br = new BufferedReader(
+									new InputStreamReader (socket.getInputStream()));
+							String msg = br.readLine();
+							ChatArea.append(msg + "\n");
+							Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
+						}
+						
 				} catch (Exception e) {
-					ChatArea.append("[" + cip + "가 접속을 해제하였습니다.");
+					ChatArea.append("[" + cip + "가 접속을 해제하였습니다.]");
 				
 					//if (!ssocket.isClosed()) {stopServer();};
 					//closeAll();
@@ -328,6 +313,33 @@ public class TetrisBoard extends JFrame {
 	            ssocket.close();
 	         }
 	      } catch (IOException e) {}
+	}
+	
+	void S_send() { // 서버 메시지 보내기
+		String s = CTF.getText().trim();
+		
+		Thread thread = new Thread() {
+			public void run() {
+				if(s.length()==0) return;
+		
+				try {
+					if(socket==null) return;
+			
+					PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+					pw.println(tfsnick + "] " + s);
+			
+					ChatArea.append(tfsnick + "]" + s + "\n");
+			
+					CTF.setText("");
+					CTF.requestFocus();
+					Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
+				} catch(Exception e2) {
+					ChatArea.append("클라이언트가 접속을 해제함\n");
+				}
+			}
+				//S_send(text);
+		};
+		thread.start();
 	}
 	
 	void startClient() { // 클라이언스타트 스레드의 메소드
@@ -361,6 +373,33 @@ public class TetrisBoard extends JFrame {
 	         }
 	      } catch (IOException e) {}
 	   }   
+	   
+	   void C_send() { // 클라이언트 메시지 보내기
+		   String s = CTF.getText().trim();
+		   
+			Thread thread = new Thread() {
+				public void run() {
+					if(s.length()==0) return;
+			
+					try {
+						if(socket==null) return;
+				
+						PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+						pw.println(tfcnick + "] " + s);
+				
+						ChatArea.append(tfcnick + "]" + s + "\n");
+				
+						CTF.setText("");
+						CTF.requestFocus();
+						Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
+					} catch(Exception e2) {
+						ChatArea.append("클라이언트가 접속을 해제함\n");
+					}
+						//C_send(text);
+				}
+			};
+			thread.start();
+	   }
 
 	   void C_receive() { // 서버에서 보낸 데이터 받는 메소드
 	      while(true) {
@@ -370,6 +409,7 @@ public class TetrisBoard extends JFrame {
 					while (true) {
 						String msg = br.readLine();
 						ChatArea.append(msg + "\n");
+						Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
 					}
 	         } catch (Exception e) {
 	            stopClient(); //클라이언트 멈춤
