@@ -48,6 +48,7 @@ public class TetrisStart extends JFrame {
 		
 		JLabel lblTitle = new JLabel("Tetris Game");
 		lblTitle.setHorizontalAlignment(SwingConstants.CENTER);
+		
 		lblTitle.setFont(new Font("±¼¸²", Font.BOLD, 20));
 		lblTitle.setBounds(125, 100, 130, 24);
 		contentPane.add(lblTitle);
