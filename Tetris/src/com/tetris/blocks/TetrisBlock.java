@@ -34,7 +34,7 @@ public abstract class TetrisBlock {
 	
 	
 	
-	public TetrisBlock(int x, int y, Color color, Color ghostColor) {
+	public TetrisBlock(int x, int y, Color color) {
 		this.color = color;
 		for(int i=0 ; i<colBlock.length ; i++){
 			colBlock[i] = new Block(0,0,color);

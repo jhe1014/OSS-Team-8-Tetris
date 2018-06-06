@@ -7,7 +7,7 @@ import com.tetris.blocks.TetrisBlock;
 public class RightTwoUp extends TetrisBlock {
 
 	public RightTwoUp(int x, int y) {
-		super(x, y, new Color(47,157,39), new Color(255,255,255));
+		super(x, y, new Color(47,157,39));
 		type = TYPE_RIGHTTWOUP;
 	}
 

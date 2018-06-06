@@ -7,7 +7,7 @@ import com.tetris.blocks.TetrisBlock;
 public class CenterUp extends TetrisBlock {
 
 	public CenterUp(int x, int y) {
-		super(x, y, new Color(153,0,133), new Color(255,255,255));
+		super(x, y, new Color(153,0,133));
 		type = TYPE_CENTERUP;
 	}
 

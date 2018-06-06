@@ -7,7 +7,7 @@ import com.tetris.blocks.TetrisBlock;
 public class Line extends TetrisBlock {
 
 	public Line(int x, int y) {
-		super(x, y, new Color(92,209,229),new Color(255,255,255));
+		super(x, y, new Color(92,209,229));
 		type = TYPE_LINE;
 	}
 

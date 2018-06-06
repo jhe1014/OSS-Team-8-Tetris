@@ -31,15 +31,15 @@ public class Block {
 	 */
 	public void drawColorBlock(Graphics g){
 	    g.setColor(color);
-		g.fillRect((fixGridX+posGridX)*size + 120, (fixGridY+posGridY)*size + 65, width, height);
+		g.fillRect((fixGridX+posGridX)*size, (fixGridY+posGridY)*size, width, height);
 		g.setColor(Color.BLACK);
-		g.drawRect((fixGridX+posGridX)*size + 120, (fixGridY+posGridY)*size + 65, width, height);
-		g.drawLine((fixGridX+posGridX)*size + 120, (fixGridY+posGridY)*size + 65, (fixGridX+posGridX)*size+width + 120, (fixGridY+posGridY)*size+height + 65);
-		g.drawLine((fixGridX+posGridX)*size + 120, (fixGridY+posGridY)*size+height + 65, (fixGridX+posGridX)*size+width + 120, (fixGridY+posGridY)*size + 65);
+		g.drawRect((fixGridX+posGridX)*size, (fixGridY+posGridY)*size, width, height);
+		g.drawLine((fixGridX+posGridX)*size, (fixGridY+posGridY)*size, (fixGridX+posGridX)*size+width, (fixGridY+posGridY)*size+height);
+		g.drawLine((fixGridX+posGridX)*size, (fixGridY+posGridY)*size+height, (fixGridX+posGridX)*size+width, (fixGridY+posGridY)*size);
 		g.setColor(color);
-		g.fillRect((fixGridX+posGridX)*size+gap + 120, (fixGridY+posGridY)*size+gap + 65, width-gap*2, height-gap*2);
+		g.fillRect((fixGridX+posGridX)*size+gap, (fixGridY+posGridY)*size+gap, width-gap*2, height-gap*2);
 		g.setColor(Color.BLACK);
-		g.drawRect((fixGridX+posGridX)*size+gap + 120, (fixGridY+posGridY)*size+gap + 65, width-gap*2, height-gap*2);
+		g.drawRect((fixGridX+posGridX)*size+gap, (fixGridY+posGridY)*size+gap, width-gap*2, height-gap*2);
 	}
 	
 	/**

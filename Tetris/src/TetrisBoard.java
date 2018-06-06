@@ -20,13 +20,13 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JLabel;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -40,10 +40,9 @@ import javax.swing.SwingConstants;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.UIManager;
 
-public class TetrisBoard extends JFrame implements Runnable{
+public class TetrisBoard extends JFrame{
 	
 	private static final long serialVersionUID = 1L;
 
@@ -65,6 +64,9 @@ public class TetrisBoard extends JFrame implements Runnable{
 	private boolean svst = false; // 서버로 접속했는지 확인하기 위해 만든 변수
 	private boolean ctst = false; // 클라이언트로 접속했는지 확인하기 위해 만든 변수
 	
+	private boolean ready = false;
+	private boolean start = false;
+	
 	JLabel lblIpValue = new JLabel();
 	JLabel lblPortValue = new JLabel();
 	JLabel lblNickNameValue = new JLabel();
@@ -81,6 +83,8 @@ public class TetrisBoard extends JFrame implements Runnable{
 	JTextArea ChatArea; // 채팅메시지 띄우는 칸
 	JScrollPane Chatrange;
 	
+	JButton btnStart = new JButton("시작하기");
+	
 	ServerSocket ssocket; // 서버 소켓
 	Socket socket; // 클라이언트 소켓
 	
@@ -95,8 +99,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 	private TetrisController controller;
 	private TetrisBlock shap;
 	private TetrisBlock hold;
-	private Integer[] lv = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-	private JComboBox<Integer> comboSpeed = new JComboBox<Integer>(lv);
+	private int speed = 1;
 	
 	private boolean isPlay = false;
 	private boolean isHold = false;
@@ -181,6 +184,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 		panel.add(lblNickNameValue);
 		
 		JPanel panel_My = new JPanel() {
+			
 				public void paintComponent(Graphics g) {
 					g.clearRect(0, 0, this.getWidth(), this.getHeight()+1);
 					g.setColor(Color.BLACK);
@@ -219,6 +223,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 				}
 		};
 		
+		panel_My.addKeyListener(new MyKeyListener());
 		//panel_My.setForeground(Color.BLACK);
 		panel_My.setBounds(120, 65, 200, 420);
 		contentPane.add(panel_My);
@@ -252,17 +257,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 					hold.setPosY(y);
 				}
 				
-
-				if(shap!=null){
-					int x=0, y=0;
-					x = shap.getPosX();
-					y = shap.getPosY();
-					shap.setPosX(x+minX);
-					shap.setPosY(y+minY);
-					shap.drawBlock(g);
-					shap.setPosX(x);
-					shap.setPosY(y);
-				}
+				
 			}
 		};
 		//panel_Hold.setBackground(Color.DARK_GRAY);
@@ -285,17 +280,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 				g.setColor(Color.DARK_GRAY);
 				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minX-1) ,0 + BLOCK_SIZE*(i), BLOCK_SIZE*(minX+5),0 + BLOCK_SIZE*(i));
 				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minY+i) ,0 + BLOCK_SIZE*(i-4), BLOCK_SIZE*(minY+i),0 + BLOCK_SIZE*(minY+5)-1);
-				
-				if(shap!=null){
-					int x=0, y=0;
-					x = shap.getPosX();
-					y = shap.getPosY();
-					shap.setPosX(x+minX);
-					shap.setPosY(y+minY);
-					shap.drawBlock(g);
-					shap.setPosX(x);
-					shap.setPosY(y);
-				}
+
 			}
 		};
 		//panel_Next.setBackground(Color.DARK_GRAY);
@@ -315,25 +300,14 @@ public class TetrisBoard extends JFrame implements Runnable{
 						TetrisBlock block = nextBlocks.get(i);
 						x = block.getPosX();
 						y = block.getPosY(); 
-						block.setPosX(13+minX);
-						block.setPosY(newY+minY);
-						if(newY==3) newY=6;
+						block.setPosX(1);
+						block.setPosY(newY+0);
+						if(newY==3) newY=5;
 						block.drawBlock(g);
 						block.setPosX(x);
 						block.setPosY(y);
 						newY+=3;
 					}
-				}
-
-				if(shap!=null){
-					int x=0, y=0;
-					x = shap.getPosX();
-					y = shap.getPosY();
-					shap.setPosX(x+minX);
-					shap.setPosY(y+minY);
-					shap.drawBlock(g);
-					shap.setPosX(x);
-					shap.setPosY(y);
 				}
 			}
 		};
@@ -401,13 +375,40 @@ public class TetrisBoard extends JFrame implements Runnable{
 		btnSend.setBounds(630, 100, 130, 27);
 		panel_Chat.add(btnSend);
 	
-		
-		JButton btnStart = new JButton("시작하기");
 		btnStart.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				gameStart((int)comboSpeed.getSelectedItem());
+				if(ctst == true && svst == false) { 
+					ready = true;
+					
+					try {
+						PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+						pw.println("ready");	
+					} catch (Exception e) {
+						System.out.println("준비 상태 전송 예외");
+					}
+				}
+				
+				else if (svst == true && ctst == false) {
+					if(ready) {
+						try {
+							PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+							pw.println("start");
+						} catch (Exception e) {
+							System.out.println("시작 상태 전송 예외");
+						}
+						
+						gameStart(speed);
+					}
+				}
+				
+				else {
+					JOptionPane.showMessageDialog(null, "서버나 클라이언트로 접속되어있지않습니다!", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+				
+				
 			}
 		});
+		
 		btnStart.setFont(new Font("굴림", Font.PLAIN, 15));
 		btnStart.setBackground(UIManager.getColor("Button.background"));
 		btnStart.setBounds(630, 0, 130, 51);
@@ -446,6 +447,9 @@ public class TetrisBoard extends JFrame implements Runnable{
 							br = new BufferedReader(
 									new InputStreamReader (socket.getInputStream()));
 							String msg = br.readLine();
+							if(msg.equals("ready")) { // 클라이언트가 준비를 눌렀을 경우
+								ready = true;
+							}
 							ChatArea.append(msg + "\n");
 							Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
 						}
@@ -577,6 +581,12 @@ public class TetrisBoard extends JFrame implements Runnable{
 							new InputStreamReader (socket.getInputStream()));
 					while (true) {
 						String msg = br.readLine();
+						if(msg.equals("start")) { //서버가 시작하기를 누른 경우
+							start = true;
+							if(ctst == true && svst == false) { 
+								if(start && ready) {gameStart(speed);}
+							}
+						}
 						ChatArea.append(msg + "\n");
 						Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
 					}
@@ -588,7 +598,6 @@ public class TetrisBoard extends JFrame implements Runnable{
 	   }
 	   
 	   void gameStart(int speed){
-			comboSpeed.setSelectedItem(new Integer(speed));
 			//돌고 있을 스레드를 정지시킨다.
 			if(th!=null){
 				try {isPlay = false;th.join();} 
@@ -611,50 +620,48 @@ public class TetrisBoard extends JFrame implements Runnable{
 			
 			//스레드 셋팅
 			isPlay = true;
-			th = new Thread(this);
+			th = new Thread() {
+				public void run() {
+					int countMove = (21-speed)*5;
+					int countDown = 0;
+					int countUp = up;
+					
+					while(isPlay){
+						try {
+							Thread.sleep(10);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						
+						if(countDown!=0){
+							countDown--;
+							if(countDown==0){
+								
+								if(controller!=null && !controller.moveDown()) fixingTetrisBlock();
+							}
+							repaint();
+							continue;
+						}
+						
+						countMove--;
+						if (countMove == 0) {
+							countMove = (21-speed)*5;
+							if (controller != null && !controller.moveDown()) countDown = down;
+						}
+						
+						if (countUp != 0) {
+							countUp--;
+							if (countUp == 0) {
+								countUp = up;
+								addBlockLine(1);
+							}
+						}
+						repaint();
+					}//while()
+				}//run()
+			};
 			th.start();
 		}
-		
-		@Override
-		public void run() {
-			int countMove = (21-(int)comboSpeed.getSelectedItem())*5;
-			int countDown = 0;
-			int countUp = up;
-			
-			while(isPlay){
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				
-				if(countDown!=0){
-					countDown--;
-					if(countDown==0){
-						
-						if(controller!=null && !controller.moveDown()) this.fixingTetrisBlock();
-					}
-					this.repaint();
-					continue;
-				}
-				
-				countMove--;
-				if (countMove == 0) {
-					countMove = (21-(int)comboSpeed.getSelectedItem())*5;
-					if (controller != null && !controller.moveDown()) countDown = down;
-				}
-				
-				if (countUp != 0) {
-					countUp--;
-					if (countUp == 0) {
-						countUp = up;
-						addBlockLine(1);
-					}
-				}
-				this.repaint();
-			}//while()
-		}//run()
-
 		
 		/**
 		 * 맵(보이기, 논리)을 상하로 이동한다.
@@ -857,12 +864,7 @@ public class TetrisBoard extends JFrame implements Runnable{
 			return null;
 		}
 		
-		/**
-		 * tetrisBlock과 같은 모양으로 고스트의 블럭모양을 반환한다.
-		 * @param tetrisBlock 고스트의 블럭모양을 결정할 블럭
-		 * @return 고스트의 블럭모양을 반환
-		 */
-		public TetrisBlock getBlockClone(TetrisBlock tetrisBlock, boolean isGhost){
+		public TetrisBlock getBlockClone(TetrisBlock tetrisBlock){
 			TetrisBlock blocks = null;
 			switch(tetrisBlock.getType()){
 			case TetrisBlock.TYPE_CENTERUP : blocks =  new CenterUp(4, 1); break;
@@ -872,11 +874,6 @@ public class TetrisBoard extends JFrame implements Runnable{
 			case TetrisBlock.TYPE_RIGHTUP : blocks =  new RightUp(4, 1); break;
 			case TetrisBlock.TYPE_LINE : blocks =  new Line(4, 1); break;
 			case TetrisBlock.TYPE_NEMO : blocks =  new Nemo(4, 1); break;
-			}
-			if(blocks!=null && isGhost){
-				blocks.setPosX(tetrisBlock.getPosX());
-				blocks.setPosY(tetrisBlock.getPosY());
-				blocks.rotation(tetrisBlock.getRotationIndex());
 			}
 			return blocks;
 		}	
@@ -888,12 +885,12 @@ public class TetrisBoard extends JFrame implements Runnable{
 			if(isHold) return;
 			
 			if(hold==null){
-				hold = getBlockClone(shap,false);
+				hold = getBlockClone(shap);
 				this.nextTetrisBlock();
 			}else{
-				TetrisBlock tmp = getBlockClone(shap,false);
-				shap = getBlockClone(hold,false);
-				hold = getBlockClone(tmp,false);
+				TetrisBlock tmp = getBlockClone(shap);
+				shap = getBlockClone(hold);
+				hold = getBlockClone(tmp);
 				this.initController();
 			}
 			
@@ -943,27 +940,31 @@ public class TetrisBoard extends JFrame implements Runnable{
 			}
 		}
 		
-		public void keyReleased(KeyEvent e) {}
-		public void keyTyped(KeyEvent e) {}
-		public void keyPressed(KeyEvent e) {
-			if(!isPlay) return;
-			if(e.getKeyCode() == KeyEvent.VK_LEFT){
-				controller.moveLeft();
-			}else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
-				controller.moveRight();
-			}else if(e.getKeyCode() == KeyEvent.VK_DOWN){
-				controller.moveDown();
-			}else if(e.getKeyCode() == KeyEvent.VK_UP){
-				controller.nextRotationLeft();
-			}else if(e.getKeyCode() == KeyEvent.VK_SPACE){
-				controller.moveQuickDown(shap.getPosY(), true);
-				this.fixingTetrisBlock();
-			}else if(e.getKeyCode() == KeyEvent.VK_SHIFT){ 
-				playBlockHold();
+		class MyKeyListener implements KeyListener {
+			public void keyReleased(KeyEvent e) {}
+			public void keyTyped(KeyEvent e) {}
+			
+			public void keyPressed(KeyEvent e) {
+				if(!isPlay) return;
+				if(e.getKeyCode() == KeyEvent.VK_LEFT){
+					controller.moveLeft();
+					System.out.println("왼쪽");
+				}else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
+					controller.moveRight(); 
+				}else if(e.getKeyCode() == KeyEvent.VK_DOWN){
+					controller.moveDown();
+				}else if(e.getKeyCode() == KeyEvent.VK_UP){
+					controller.nextRotationLeft();
+				}else if(e.getKeyCode() == KeyEvent.VK_SPACE){
+					controller.moveQuickDown(shap.getPosY(), true);
+					fixingTetrisBlock();
+				}else if(e.getKeyCode() == KeyEvent.VK_SHIFT){ 
+					playBlockHold();
+				}
+				repaint();
 			}
-			this.repaint();
 		}
-
+		
 		//public void mouseClicked(MouseEvent e) {}
 		//public void mouseEntered(MouseEvent e) {}
 		//public void mouseExited(MouseEvent e) {}
@@ -974,7 +975,6 @@ public class TetrisBoard extends JFrame implements Runnable{
 
 		public boolean isPlay(){return isPlay;}
 		public void setPlay(boolean isPlay){this.isPlay = isPlay;}
-		public void changeSpeed(Integer speed) {comboSpeed.setSelectedItem(speed);}
 	
 
 	class Serverframe extends JFrame{ // 서버로 접속하기 눌렀을 때 입력창
@@ -1091,6 +1091,8 @@ public class TetrisBoard extends JFrame implements Runnable{
 						lblIpValue.setText(tfcip);
 					    lblPortValue.setText(tfcpt);
 					    lblNickNameValue.setText(tfcnick);
+					    
+					    btnStart.setText("준비하기");
 					    
 					    startClient();
 						
