@@ -22,15 +22,26 @@ import javax.swing.JLabel;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Rectangle;
+import java.awt.Robot;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.net.DatagramSocket;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -39,6 +50,8 @@ import java.util.ArrayList;
 import javax.swing.SwingConstants;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.UIManager;
 
@@ -83,7 +96,9 @@ public class TetrisBoard extends JFrame{
 	JTextArea ChatArea; // 채팅메시지 띄우는 칸
 	JScrollPane Chatrange;
 	
+	JPanel panel_My;
 	JButton btnStart = new JButton("시작하기");
+	JLabel panel_Your = new JLabel();
 	
 	ServerSocket ssocket; // 서버 소켓
 	Socket socket; // 클라이언트 소켓
@@ -92,7 +107,7 @@ public class TetrisBoard extends JFrame{
 	public static final int BLOCK_SIZE = 20;
 	public static final int BOARD_X = 120;
 	public static final int BOARD_Y = 50;
-	private int minX=1, minY=0, maxX=10, maxY=21, down=50, up=0;
+	private int minX=0, minY=0, maxX=10, maxY=21, down=50, up=0;
 	private ArrayList<Block> blockList;
 	private ArrayList<TetrisBlock> nextBlocks;
 	private Block map[][];
@@ -106,7 +121,12 @@ public class TetrisBoard extends JFrame{
 	private int removeLineCount = 0;
 	private int removeLineCombo = 0;
 	
+	private DatagramSocket sock;
+	private int myport = 6000; // 각 클라이언트 띄울 때마다 바꿔야함
+	private int otherport = 5000; // 각 클라이언트 띄울 때마다 바꿔야함
+	private InetAddress address = null;
 	
+	 
 	public TetrisBoard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 800, 700);
@@ -183,8 +203,9 @@ public class TetrisBoard extends JFrame{
 		lblNickNameValue.setText(nickname);
 		panel.add(lblNickNameValue);
 		
-		JPanel panel_My = new JPanel() {
-			
+		BufferedImage bi = new BufferedImage(200,420, BufferedImage.TYPE_INT_RGB);
+		
+		panel_My = new JPanel() {
 				public void paintComponent(Graphics g) {
 					g.clearRect(0, 0, this.getWidth(), this.getHeight()+1);
 					g.setColor(Color.BLACK);
@@ -192,8 +213,8 @@ public class TetrisBoard extends JFrame{
 					
 					//그리드 표시
 					g.setColor(Color.darkGray);
-					for(int i=1;i<maxY;i++) g.drawLine(0 + BLOCK_SIZE*(minX-1), 0+BLOCK_SIZE*(i+minY), 0 + (maxX+minX-1)*BLOCK_SIZE, 0+BLOCK_SIZE*(i+minY));
-					for(int i=1;i<maxX;i++) g.drawLine(0 + BLOCK_SIZE*(i+minX-1), 0 + BLOCK_SIZE*minY, 0 + BLOCK_SIZE*(i+minX-1), 0 + BLOCK_SIZE*(minY+maxY));
+					for(int i=1;i<maxY;i++) g.drawLine(0 + BLOCK_SIZE*(minX), 0+BLOCK_SIZE*(i+minY), 0 + (maxX+minX)*BLOCK_SIZE, 0+BLOCK_SIZE*(i+minY));
+					for(int i=1;i<maxX;i++) g.drawLine(0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*minY, 0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*(minY+maxY));
 				
 					if(blockList!=null){
 						int x=0, y=0;
@@ -223,11 +244,36 @@ public class TetrisBoard extends JFrame{
 				}
 		};
 		
-		panel_My.addKeyListener(new MyKeyListener());
 		//panel_My.setForeground(Color.BLACK);
 		panel_My.setBounds(120, 65, 200, 420);
+		//panel_My.setFocusable(true); 
 		contentPane.add(panel_My);
 		
+		panel_My.addKeyListener(new KeyListener() {
+			public void keyPressed(KeyEvent e) {
+					System.out.println("키이벤트");
+					if(!isPlay) return;
+					if(e.getKeyCode() == KeyEvent.VK_LEFT){
+						controller.moveLeft();
+						System.out.println("왼쪽");
+					}else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
+						controller.moveRight(); 
+					}else if(e.getKeyCode() == KeyEvent.VK_DOWN){
+						controller.moveDown();
+					}else if(e.getKeyCode() == KeyEvent.VK_UP){
+						controller.nextRotationLeft();
+					}else if(e.getKeyCode() == KeyEvent.VK_SPACE){
+						controller.moveQuickDown(shap.getPosY(), true);
+						fixingTetrisBlock();
+					}else if(e.getKeyCode() == KeyEvent.VK_SHIFT){ 
+						playBlockHold();
+					}
+					repaint();
+				}
+					public void keyReleased(KeyEvent arg0) {}
+					public void keyTyped(KeyEvent e) {}
+		});
+	
 		JLabel lblHold = new JLabel("HOLD");
 		lblHold.setHorizontalAlignment(SwingConstants.CENTER);
 		lblHold.setFont(new Font("굴림", Font.BOLD, 18));
@@ -250,7 +296,7 @@ public class TetrisBoard extends JFrame{
 					int x=0, y=0, newY=3;
 					x = hold.getPosX();
 					y = hold.getPosY();
-					hold.setPosX(-4+minX);
+					hold.setPosX(2+minX);
 					hold.setPosY(newY+minY);
 					hold.drawBlock(g);
 					hold.setPosX(x);
@@ -264,13 +310,13 @@ public class TetrisBoard extends JFrame{
 		panel_Hold.setBounds(10, 105, 100, 100);
 		contentPane.add(panel_Hold);
 		
-		JLabel lblNewLabel = new JLabel("NEXT");
+		/*JLabel lblNewLabel = new JLabel("NEXT");
 		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		lblNewLabel.setFont(new Font("굴림", Font.BOLD, 18));
 		lblNewLabel.setBounds(330, 80, 100, 20);
-		contentPane.add(lblNewLabel);
+		contentPane.add(lblNewLabel);*/
 		
-		JPanel panel_Next = new JPanel() {
+		/*JPanel panel_Next = new JPanel() {
 			public void paintComponent(Graphics g) {
 				g.clearRect(0, 0, this.getWidth(), this.getHeight()+1);
 				
@@ -278,14 +324,14 @@ public class TetrisBoard extends JFrame{
 				g.fillRect(0, 0, this.getWidth(), this.getHeight()+1);
 				
 				g.setColor(Color.DARK_GRAY);
-				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minX-1) ,0 + BLOCK_SIZE*(i), BLOCK_SIZE*(minX+5),0 + BLOCK_SIZE*(i));
-				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minY+i) ,0 + BLOCK_SIZE*(i-4), BLOCK_SIZE*(minY+i),0 + BLOCK_SIZE*(minY+5)-1);
+				for(int i=1;i<5;i++) g.drawLine(0 + BLOCK_SIZE*(minX), 0+BLOCK_SIZE*(i+minY), 0 + (maxX+minX)*BLOCK_SIZE, 0+BLOCK_SIZE*(i+minY));
+				for(int i=1;i<5;i++) g.drawLine(0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*minY, 0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*(minY+maxY));
 
 			}
 		};
 		//panel_Next.setBackground(Color.DARK_GRAY);
 		panel_Next.setBounds(330, 105, 100, 100);
-		contentPane.add(panel_Next);
+		contentPane.add(panel_Next);*/
 		
 		JPanel panel_NextList = new JPanel() {
 			public void paintComponent(Graphics g) {
@@ -315,8 +361,8 @@ public class TetrisBoard extends JFrame{
 		panel_NextList.setBounds(330, 225, 100, 240);
 		contentPane.add(panel_NextList);
 		
-		JPanel panel_Your = new JPanel();
-		panel_Your.setBackground(Color.DARK_GRAY);
+		panel_Your.setBackground(Color.BLACK);
+		panel_Your.setOpaque(true);
 		panel_Your.setBounds(500, 65, 200, 420);
 		contentPane.add(panel_Your);
 		
@@ -381,8 +427,16 @@ public class TetrisBoard extends JFrame{
 					ready = true;
 					
 					try {
-						PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
-						pw.println("ready");	
+						   Robot robot = new Robot();
+						   Rectangle area = new Rectangle(panel_My.getX(), panel_My.getY(), panel_My.getWidth(), panel_My.getHeight());
+						   BufferedImage bi = robot.createScreenCapture(area);
+						   ImageIcon imc = new ImageIcon(bi);
+						   panel_Your.setIcon(imc);
+						   
+						   PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
+						   pw.println("ready");	
+						   panel_My.requestFocus();
+						 
 					} catch (Exception e) {
 						System.out.println("준비 상태 전송 예외");
 					}
@@ -398,6 +452,9 @@ public class TetrisBoard extends JFrame{
 						}
 						
 						gameStart(speed);
+						panel_My.requestFocus();
+						imgReceive();
+						imgSend();
 					}
 				}
 				
@@ -504,7 +561,7 @@ public class TetrisBoard extends JFrame{
 					ChatArea.append(tfsnick + "]" + s + "\n");
 			
 					CTF.setText("");
-					CTF.requestFocus();
+					panel_My.requestFocus();
 					Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
 				} catch(Exception e2) {
 					ChatArea.append("클라이언트가 접속을 해제함\n");
@@ -563,7 +620,7 @@ public class TetrisBoard extends JFrame{
 						ChatArea.append(tfcnick + "]" + s + "\n");
 				
 						CTF.setText("");
-						CTF.requestFocus();
+						panel_My.requestFocus();
 						Chatrange.getVerticalScrollBar().setValue(Chatrange.getVerticalScrollBar().getMaximum());
 					} catch(Exception e2) {
 						ChatArea.append("클라이언트가 접속을 해제함\n");
@@ -584,7 +641,11 @@ public class TetrisBoard extends JFrame{
 						if(msg.equals("start")) { //서버가 시작하기를 누른 경우
 							start = true;
 							if(ctst == true && svst == false) { 
-								if(start && ready) {gameStart(speed);}
+								if(start && ready) {
+									gameStart(speed);
+									//imgReceive();
+									//imgSend();
+								}
 							}
 						}
 						ChatArea.append(msg + "\n");
@@ -595,6 +656,63 @@ public class TetrisBoard extends JFrame{
 	            break;
 	         }
 	      }
+	   }
+	   
+	   public void imgSend() { // 자신의 게임화면 상대방에게 송신
+		   Thread th = new Thread() {
+			   public void run() {
+				   try {
+					   byte outbuff[] = new byte[80000];
+					   while(isPlay) {
+						   Robot robot = new Robot();
+						   
+						   Rectangle area = new Rectangle(120, 65, 200, 420);
+						   BufferedImage bufferedImage = robot.createScreenCapture(area);
+						   ImageIcon imc = new ImageIcon(bufferedImage);
+						   panel_Your.setIcon(imc);
+						   
+						   ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						   ImageIO.write(bufferedImage, "jpg", baos);
+						   
+						   outbuff = baos.toByteArray();
+						   
+						   DatagramPacket dp = new DatagramPacket(outbuff, outbuff.length, address, otherport);
+						   sock.send(dp);
+						   }
+				   } catch(Exception e){
+					   System.out.println("이미지 전송 예외 발생");
+				   }
+			   }
+		   };
+	   }
+	   
+	   public void imgReceive() { // 이미지 수신 받고 띄우기
+		   Thread th = new Thread() {
+			 public void run() {
+				 try {
+					byte[] rcvbyte = new byte[80000];
+		 			DatagramPacket dp = new DatagramPacket(rcvbyte, rcvbyte.length);
+		 			BufferedImage bf;
+		 			ImageIcon imc;
+		 			address = InetAddress.getByName("127.0.0.1");
+		 			sock = new DatagramSocket(myport);
+		 			
+				 	while(isPlay) {
+				 		sock.receive(dp);
+				 		ByteArrayInputStream bais = new ByteArrayInputStream(rcvbyte);
+				 		bf = ImageIO.read(bais);
+				 		
+				 		if(bf != null) {
+				 			imc = new ImageIcon(bf);
+				 			panel_Your.setIcon(imc);
+				 			Thread.sleep(15);
+				 			}
+				 		}
+				 	} catch (Exception e) {
+				 			System.out.println("이미지 수신 예외 발생");
+				 		}
+				 }
+		   };
 	   }
 	   
 	   void gameStart(int speed){
@@ -939,39 +1057,6 @@ public class TetrisBoard extends JFrame{
 				this.notify();
 			}
 		}
-		
-		class MyKeyListener implements KeyListener {
-			public void keyReleased(KeyEvent e) {}
-			public void keyTyped(KeyEvent e) {}
-			
-			public void keyPressed(KeyEvent e) {
-				if(!isPlay) return;
-				if(e.getKeyCode() == KeyEvent.VK_LEFT){
-					controller.moveLeft();
-					System.out.println("왼쪽");
-				}else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
-					controller.moveRight(); 
-				}else if(e.getKeyCode() == KeyEvent.VK_DOWN){
-					controller.moveDown();
-				}else if(e.getKeyCode() == KeyEvent.VK_UP){
-					controller.nextRotationLeft();
-				}else if(e.getKeyCode() == KeyEvent.VK_SPACE){
-					controller.moveQuickDown(shap.getPosY(), true);
-					fixingTetrisBlock();
-				}else if(e.getKeyCode() == KeyEvent.VK_SHIFT){ 
-					playBlockHold();
-				}
-				repaint();
-			}
-		}
-		
-		//public void mouseClicked(MouseEvent e) {}
-		//public void mouseEntered(MouseEvent e) {}
-		//public void mouseExited(MouseEvent e) {}
-		//public void mousePressed(MouseEvent e) {
-			//this.requestFocus();
-		//}
-		//public void mouseReleased(MouseEvent e) {}
 
 		public boolean isPlay(){return isPlay;}
 		public void setPlay(boolean isPlay){this.isPlay = isPlay;}
