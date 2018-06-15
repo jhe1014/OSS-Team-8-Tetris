@@ -152,7 +152,7 @@ public class TetrisOnePlayer extends JFrame {
 					public void keyTyped(KeyEvent e) {}
 		});
 		
-		/*JPanel PanelNext = new JPanel() {
+		JPanel PanelNext = new JPanel() {
 			public void paintComponent(Graphics g) {
 				g.clearRect(0, 0, this.getWidth(), this.getHeight()+1);
 				
@@ -163,11 +163,26 @@ public class TetrisOnePlayer extends JFrame {
 				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minX-1) ,0 + BLOCK_SIZE*(i), BLOCK_SIZE*(minX+5),0 + BLOCK_SIZE*(i));
 				for(int i=1;i<5;i++) g.drawLine(BLOCK_SIZE*(minY+i) ,0 + BLOCK_SIZE*(i-4), BLOCK_SIZE*(minY+i),0 + BLOCK_SIZE*(minY+5)-1);
 
+				if(nextBlocks!=null){
+					int x=0, y=0, newY=3;
+					for(int i = 0 ; i<nextBlocks.size() ; i++){
+						TetrisBlock block = nextBlocks.get(i);
+						x = block.getPosX();
+						y = block.getPosY(); 
+						block.setPosX(2+minX);
+						block.setPosY(newY+minY-1);
+						if(newY==3) newY=6;
+						block.drawBlock(g);
+						block.setPosX(x);
+						block.setPosY(y);
+						newY+=3;
+					}
+				}
 			}
 		};
 		PanelNext.setBackground(Color.DARK_GRAY);
 		PanelNext.setBounds(330, 105, 100, 100);
-		contentPane.add(PanelNext);*/
+		contentPane.add(PanelNext);
 		
 		JPanel PanelNextBoard = new JPanel() {
 			public void paintComponent(Graphics g) {
@@ -241,11 +256,13 @@ public class TetrisOnePlayer extends JFrame {
 		
 		JLabel lblHold = new JLabel("H O L D");
 		lblHold.setBounds(25, 80, 78, 21);
+		lblHold.setFont(new Font("µ¸À½", Font.BOLD, 20));
 		contentPane.add(lblHold);
 		
-		/*JLabel lblNext = new JLabel("N E X T");
+		JLabel lblNext = new JLabel("N E X T");
 		lblNext.setBounds(352, 80, 78, 21);
-		contentPane.add(lblNext);*/
+		lblNext.setFont(new Font("µ¸À½", Font.BOLD, 20));
+		contentPane.add(lblNext);
 		
 	}
 	 void gameStart(int speed){

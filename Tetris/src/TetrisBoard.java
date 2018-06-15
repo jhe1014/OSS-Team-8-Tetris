@@ -107,6 +107,7 @@ public class TetrisBoard extends JFrame{
 	public static final int BLOCK_SIZE = 20;
 	public static final int BOARD_X = 120;
 	public static final int BOARD_Y = 50;
+	private static final int FRAME_X = 1000, FRAME_Y = 100; // 실행시킬 떄 X좌표값 바꿔야하는 번거로움... ㅠㅠ
 	private int minX=0, minY=0, maxX=10, maxY=21, down=50, up=0;
 	private ArrayList<Block> blockList;
 	private ArrayList<TetrisBlock> nextBlocks;
@@ -122,14 +123,14 @@ public class TetrisBoard extends JFrame{
 	private int removeLineCombo = 0;
 	
 	private DatagramSocket sock;
-	private int myport = 6000; // 각 클라이언트 띄울 때마다 바꿔야함
-	private int otherport = 5000; // 각 클라이언트 띄울 때마다 바꿔야함
+	private int myport = 5000;
+	private int otherport = 6000;
 	private InetAddress address = null;
 	
 	 
 	public TetrisBoard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 800, 700);
+		setBounds(FRAME_X, FRAME_Y, 800, 700);
 		setResizable(false);
 		contentPane = new JPanel();
 		contentPane.setBackground(new Color(176, 224, 230));
@@ -251,11 +252,11 @@ public class TetrisBoard extends JFrame{
 		
 		panel_My.addKeyListener(new KeyListener() {
 			public void keyPressed(KeyEvent e) {
-					System.out.println("키이벤트");
+					//System.out.println("키이벤트");
 					if(!isPlay) return;
 					if(e.getKeyCode() == KeyEvent.VK_LEFT){
 						controller.moveLeft();
-						System.out.println("왼쪽");
+						//System.out.println("왼쪽");
 					}else if(e.getKeyCode() == KeyEvent.VK_RIGHT){
 						controller.moveRight(); 
 					}else if(e.getKeyCode() == KeyEvent.VK_DOWN){
@@ -274,10 +275,9 @@ public class TetrisBoard extends JFrame{
 					public void keyTyped(KeyEvent e) {}
 		});
 	
-		JLabel lblHold = new JLabel("HOLD");
-		lblHold.setHorizontalAlignment(SwingConstants.CENTER);
-		lblHold.setFont(new Font("굴림", Font.BOLD, 18));
-		lblHold.setBounds(10, 80, 100, 20);
+		JLabel lblHold = new JLabel("H O L D");
+		lblHold.setBounds(25, 80, 78, 21);
+		lblHold.setFont(new Font("돋음", Font.BOLD, 20));
 		contentPane.add(lblHold);
 		
 		JPanel panel_Hold = new JPanel() {
@@ -310,13 +310,12 @@ public class TetrisBoard extends JFrame{
 		panel_Hold.setBounds(10, 105, 100, 100);
 		contentPane.add(panel_Hold);
 		
-		/*JLabel lblNewLabel = new JLabel("NEXT");
-		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		lblNewLabel.setFont(new Font("굴림", Font.BOLD, 18));
-		lblNewLabel.setBounds(330, 80, 100, 20);
-		contentPane.add(lblNewLabel);*/
+		JLabel lblNext = new JLabel("N E X T");
+		lblNext.setBounds(352, 80, 78, 21);
+		lblNext.setFont(new Font("돋음", Font.BOLD, 20));
+		contentPane.add(lblNext);
 		
-		/*JPanel panel_Next = new JPanel() {
+		JPanel panel_Next = new JPanel() {
 			public void paintComponent(Graphics g) {
 				g.clearRect(0, 0, this.getWidth(), this.getHeight()+1);
 				
@@ -327,11 +326,27 @@ public class TetrisBoard extends JFrame{
 				for(int i=1;i<5;i++) g.drawLine(0 + BLOCK_SIZE*(minX), 0+BLOCK_SIZE*(i+minY), 0 + (maxX+minX)*BLOCK_SIZE, 0+BLOCK_SIZE*(i+minY));
 				for(int i=1;i<5;i++) g.drawLine(0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*minY, 0 + BLOCK_SIZE*(i+minX), 0 + BLOCK_SIZE*(minY+maxY));
 
+				
+				if(nextBlocks!=null){
+					int x=0, y=0, newY=3;
+					for(int i = 0 ; i<nextBlocks.size() ; i++){
+						TetrisBlock block = nextBlocks.get(i);
+						x = block.getPosX();
+						y = block.getPosY(); 
+						block.setPosX(2+minX);
+						block.setPosY(newY+minY-1);
+						if(newY==3) newY=6;
+						block.drawBlock(g);
+						block.setPosX(x);
+						block.setPosY(y);
+						newY+=3;
+					}
+				}
 			}
 		};
 		//panel_Next.setBackground(Color.DARK_GRAY);
 		panel_Next.setBounds(330, 105, 100, 100);
-		contentPane.add(panel_Next);*/
+		contentPane.add(panel_Next);
 		
 		JPanel panel_NextList = new JPanel() {
 			public void paintComponent(Graphics g) {
@@ -427,11 +442,11 @@ public class TetrisBoard extends JFrame{
 					ready = true;
 					
 					try {
-						   Robot robot = new Robot();
+						   /*Robot robot = new Robot();
 						   Rectangle area = new Rectangle(panel_My.getX(), panel_My.getY(), panel_My.getWidth(), panel_My.getHeight());
 						   BufferedImage bi = robot.createScreenCapture(area);
 						   ImageIcon imc = new ImageIcon(bi);
-						   panel_Your.setIcon(imc);
+						   panel_Your.setIcon(imc);*/
 						   
 						   PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
 						   pw.println("ready");	
@@ -453,8 +468,8 @@ public class TetrisBoard extends JFrame{
 						
 						gameStart(speed);
 						panel_My.requestFocus();
-						imgReceive();
-						imgSend();
+						imgReceive(myport,panel_Your);
+						imgSend(otherport,panel_My);
 					}
 				}
 				
@@ -643,8 +658,8 @@ public class TetrisBoard extends JFrame{
 							if(ctst == true && svst == false) { 
 								if(start && ready) {
 									gameStart(speed);
-									//imgReceive();
-									//imgSend();
+									imgReceive(otherport,panel_Your);
+									imgSend(myport,panel_My);
 								}
 							}
 						}
@@ -658,35 +673,38 @@ public class TetrisBoard extends JFrame{
 	      }
 	   }
 	   
-	   public void imgSend() { // 자신의 게임화면 상대방에게 송신
+	   public void imgSend(final int portNum ,final JPanel PANEL) { // 자신의 게임화면 상대방에게 송신
 		   Thread th = new Thread() {
 			   public void run() {
 				   try {
 					   byte outbuff[] = new byte[80000];
 					   while(isPlay) {
 						   Robot robot = new Robot();
-						   
-						   Rectangle area = new Rectangle(120, 65, 200, 420);
+						   System.out.println("이미지전송중");
+						   Rectangle area = new Rectangle(120+FRAME_X, 105+FRAME_Y, 200, 420);
 						   BufferedImage bufferedImage = robot.createScreenCapture(area);
 						   ImageIcon imc = new ImageIcon(bufferedImage);
-						   panel_Your.setIcon(imc);
-						   
+						   //panel_Your.setIcon(imc);
+						   //PANEL.setIcon(imc);
+						 
 						   ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						   ImageIO.write(bufferedImage, "jpg", baos);
 						   
 						   outbuff = baos.toByteArray();
 						   
-						   DatagramPacket dp = new DatagramPacket(outbuff, outbuff.length, address, otherport);
+						   DatagramPacket dp = new DatagramPacket(outbuff, outbuff.length, address, portNum);
 						   sock.send(dp);
 						   }
 				   } catch(Exception e){
 					   System.out.println("이미지 전송 예외 발생");
+					   e.printStackTrace();
 				   }
 			   }
 		   };
+		   th.start();
 	   }
 	   
-	   public void imgReceive() { // 이미지 수신 받고 띄우기
+	   public void imgReceive(final int portNum, final JLabel PANEL) { // 이미지 수신 받고 띄우기
 		   Thread th = new Thread() {
 			 public void run() {
 				 try {
@@ -695,24 +713,28 @@ public class TetrisBoard extends JFrame{
 		 			BufferedImage bf;
 		 			ImageIcon imc;
 		 			address = InetAddress.getByName("127.0.0.1");
-		 			sock = new DatagramSocket(myport);
+		 			sock = new DatagramSocket(portNum);
 		 			
 				 	while(isPlay) {
+				 		System.out.println("이미지 수신중");
 				 		sock.receive(dp);
 				 		ByteArrayInputStream bais = new ByteArrayInputStream(rcvbyte);
 				 		bf = ImageIO.read(bais);
 				 		
 				 		if(bf != null) {
 				 			imc = new ImageIcon(bf);
-				 			panel_Your.setIcon(imc);
+				 			//panel_Your.setIcon(imc);
+				 			PANEL.setIcon(imc);
 				 			Thread.sleep(15);
 				 			}
 				 		}
 				 	} catch (Exception e) {
+				 			e.printStackTrace();
 				 			System.out.println("이미지 수신 예외 발생");
 				 		}
 				 }
 		   };
+		   th.start();
 	   }
 	   
 	   void gameStart(int speed){
