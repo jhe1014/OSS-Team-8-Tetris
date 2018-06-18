@@ -45,6 +45,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.swing.SwingConstants;
@@ -107,7 +108,7 @@ public class TetrisBoard extends JFrame{
 	public static final int BLOCK_SIZE = 20;
 	public static final int BOARD_X = 120;
 	public static final int BOARD_Y = 50;
-	private static final int FRAME_X = 1000, FRAME_Y = 100; // 실행시킬 떄 X좌표값 바꿔야하는 번거로움... ㅠㅠ
+	private static final int FRAME_X = 100, FRAME_Y = 100; // 실행시킬 떄 X좌표값 바꿔야하는 번거로움... ㅠㅠ
 	private int minX=0, minY=0, maxX=10, maxY=21, down=50, up=0;
 	private ArrayList<Block> blockList;
 	private ArrayList<TetrisBlock> nextBlocks;
@@ -123,9 +124,10 @@ public class TetrisBoard extends JFrame{
 	private int removeLineCombo = 0;
 	
 	private DatagramSocket sock;
-	private int myport = 5000;
-	private int otherport = 6000;
+	private int myport = 7000;
+	private int otherport = 8000;
 	private InetAddress address = null;
+	InetAddress local = null;
 	
 	 
 	public TetrisBoard() {
@@ -686,6 +688,84 @@ public class TetrisBoard extends JFrame{
 						   ImageIcon imc = new ImageIcon(bufferedImage);
 						   //panel_Your.setIcon(imc);
 						   //PANEL.setIcon(imc);
+						   
+						  /* byte[][] temp = controller.getIndex();
+						   byte[] pos = new byte[2];
+						   byte sendarr[] = new byte[8];
+						   byte sendarr2[] = new byte[maxX*maxY];
+						   
+						   for(int i=0; i<comb.length; i++) {
+							   for(int j=0; j<comb[i].length; j++) {
+								   comb[i][j] = 0;
+							   }
+						   }						   
+						   
+						   for(int i=0; i<comb.length; i++) {
+							   for(int j=0; j<comb[i].length; j++) {
+								   if(fixed[i][j]==1) {
+									   comb[i][j] = 1;
+								   }
+								 //  if(getData[i][j]==1) {
+								//	   comb[i][j] = 1;
+								 //  }
+							   }
+						   }
+						   					   
+						   	   
+						   //실험용 코드
+						   
+						   for(int i=0; i<maxY; i++) {
+							   for(int j=0; j<maxX; j++) {
+								   sendarr2[i*maxX+j] = comb[i][j];
+							   }
+						   }*/
+						/*
+						   int count=0;
+						   for(int i=0; i<sendarr2.length; i++) {
+							   System.out.print(sendarr2[i]);
+							   
+							   if(count==maxX) {
+								   System.out.println();
+								   count=0;
+							   }
+							   count++;
+						   }
+						   */
+						   
+						   /*
+						   System.out.println("sendarr");
+						   for(int i=0; i<8; i++) {
+							   
+							   System.out.print(sendarr[i]+" ");
+						   }
+						   */
+						   
+						   
+						   /*System.out.println();
+						   ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						   //ByteArrayInputStream baos1 = new ByteArrayInputStream(sendarr);
+						   //ImageIO.write(bufferedImage, "jpg", baos);
+						   
+						   
+						   //baos.write(sendarr, 0, 8);
+						   baos.write(sendarr2, 0, maxX*maxY);
+						   outbuff = baos.toByteArray();*/
+						   
+						   
+						   
+						   //새거
+						 
+						   
+						   
+//						   System.out.println("----------------------read--------");
+//						   byte[] temp1 = baos1.readAllBytes();
+//						   for(int i=0; i<temp1.length; i++) {
+//							   System.out.print(temp1[i]);
+//						   }
+						   /*DatagramPacket dp = new DatagramPacket(outbuff, outbuff.length, address, portNum);
+						   
+						   dp.setData(outbuff, 0, outbuff.length);
+						   sock.send(dp);*/
 						 
 						   ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						   ImageIO.write(bufferedImage, "jpg", baos);
@@ -712,10 +792,51 @@ public class TetrisBoard extends JFrame{
 		 			DatagramPacket dp = new DatagramPacket(rcvbyte, rcvbyte.length);
 		 			BufferedImage bf;
 		 			ImageIcon imc;
-		 			address = InetAddress.getByName("127.0.0.1");
+		 			address = InetAddress.getByName("192.168.0.128");
 		 			sock = new DatagramSocket(portNum);
 		 			
 				 	while(isPlay) {
+
+				 		/*byte temp[] = new byte[255];
+				 		//byte temp2[][] = new byte[4][2];
+				 		sock.receive(dp);
+				 		ByteArrayInputStream bais = new ByteArrayInputStream(rcvbyte);
+				 		System.out.println("이미지 수신중 ip&port :" + dp.getSocketAddress() +
+				 				" 수신버퍼크기 : " + dp.getLength());
+
+				 		//temp = bais.readAllBytes();
+				 		bais.read(temp, 0, maxX*maxY);
+				 		System.out.println();
+				 		//System.out.println("수신버퍼확인");
+						for(int i=0; i<8; i++) {
+							//System.out.print(temp[i]);
+						}
+						
+						for(int i=0; i<4; i++) {
+							//System.out.println("~~~");
+							for(int j=0; j<2; j++) {
+								temp2[i][j] = temp[i*2+j];
+							}
+						//	System.out.println();
+						}
+
+						
+						
+						
+						for(int i=0; i<maxY; i++) {
+							//System.out.println("~~~");
+							for(int j=0; j<maxX; j++) {
+								reassemble[i][j] = temp[i*maxX+j];
+								//System.out.print(" "+temp2[i][j]);
+//								temp3[i][j] = temp[i*2+j];
+							}
+						//	System.out.println();
+						}						
+						
+							
+				 			Thread.sleep(15);
+				 			//}*/
+				 		
 				 		System.out.println("이미지 수신중");
 				 		sock.receive(dp);
 				 		ByteArrayInputStream bais = new ByteArrayInputStream(rcvbyte);
@@ -1161,7 +1282,7 @@ public class TetrisBoard extends JFrame{
 				setSize(400, 250);
 				getContentPane().setLayout(null);
 				
-				JLabel ctip = new JLabel("IP주소");
+				JLabel ctip = new JLabel("상대IP");
 				ctip.setFont(new Font("굴림", Font.BOLD, 15));
 				ctip.setBounds(31, 27, 78, 21);
 				getContentPane().add(ctip);
@@ -1195,7 +1316,14 @@ public class TetrisBoard extends JFrame{
 						
 						ctst = true;
 						
-						lblIpValue.setText(tfcip);
+						try {
+							local = InetAddress.getLocalHost();
+						} catch (UnknownHostException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						
+						lblIpValue.setText(local.getHostAddress());
 					    lblPortValue.setText(tfcpt);
 					    lblNickNameValue.setText(tfcnick);
 					    

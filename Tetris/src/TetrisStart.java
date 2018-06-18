@@ -62,6 +62,7 @@ public class TetrisStart extends JFrame {
 				// TODO Auto-generated method stub
 				TetrisOnePlayer a = new TetrisOnePlayer();
 				a.setVisible(true);
+				setVisible(false);
 			}
 		});
 		contentPane.add(btn1P);
@@ -75,6 +76,7 @@ public class TetrisStart extends JFrame {
 				// TODO Auto-generated method stub
 				TetrisBoard a = new TetrisBoard();
 				a.setVisible(true);
+				setVisible(false);
 			}
 		});
 		contentPane.add(btn2P);
